@@ -68,12 +68,12 @@
   #panel-toggle {
     position: absolute; top: 12px; left: 12px; z-index: 20;
     width: 52px; height: 52px; border-radius: 50%;
-    background: rgba(255,255,255,0.95); border: 1px solid #d0d0d4;
+    background: #d6e9ff; border: 1px solid #a8c8ef;
     cursor: pointer; font-size: 22px; font-weight: 600; color: #1d1d1f;
     box-shadow: 0 2px 10px rgba(0,0,0,0.15);
     display: flex; align-items: center; justify-content: center;
   }
-  #panel-toggle:hover { background: #fff; }
+  #panel-toggle:hover { background: #c5ddfb; }
   #panel-toggle:active { transform: scale(0.95); }
 
   /* Collapsible graph controls */
@@ -88,9 +88,10 @@
   }
   #graph-controls .controls-header button {
     width: 40px; height: 40px; padding: 0; font-size: 18px; font-weight: 600;
-    border: 1px solid #d0d0d4; background: #fff; border-radius: 8px;
+    border: 1px solid #a8c8ef; background: #d6e9ff; border-radius: 8px;
     cursor: pointer; color: #1d1d1f;
   }
+  #graph-controls .controls-header button:hover { background: #c5ddfb; }
   #graph-controls .controls-header button:active { transform: scale(0.95); }
   #graph-controls.collapsed #controls-body { display: none; }
   #graph-controls.collapsed .controls-header {
