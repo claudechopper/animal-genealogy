@@ -4,9 +4,10 @@
   "description": "Animal genealogy tracker — single-file HTML app",
   "private": true,
   "scripts": {
-    "start": "serve -s . -l tcp://0.0.0.0:${PORT:-8080}"
+    "start": "node server.js"
   },
   "dependencies": {
-    "serve": "^14.2.4"
+    "express": "^4.21.1",
+    "express-basic-auth": "^1.2.1"
   }
 }
