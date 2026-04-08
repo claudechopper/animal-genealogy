@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SHELAGH — Animal Genealogy Tracker</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #1d1d1f; }
+  header {
+    background: #1d1d1f; color: #fff; padding: 12px 20px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+  header .spacer { flex: 1; }
+  header input[type="search"] {
+    padding: 6px 10px; border-radius: 6px; border: 1px solid #444;
+    background: #2c2c2e; color: #fff; min-width: 180px;
+  }
+  header button {
+    padding: 6px 12px; border-radius: 6px; border: 1px solid #444;
+    background: #2c2c2e; color: #fff; cursor: pointer; font-size: 13px;
+  }
+  header button:hover { background: #3a3a3c; }
+  header button.danger { border-color: #8a1f1f; }
+  header button.danger:hover { background: #5a1414; }
+
+  main {
+    display: flex; height: calc(100vh - 56px);
+  }
+  #panel {
+    width: 340px; padding: 16px; background: #fff; border-right: 1px solid #e0e0e2;
+    overflow-y: auto;
+  }
+  #panel h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+  #panel label {
+    display: block; font-size: 12px; color: #555; margin: 10px 0 4px; font-weight: 500;
+  }
+  #panel input, #panel select, #panel textarea {
+    width: 100%; padding: 7px 9px; border: 1px solid #d0d0d4; border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: #fafafa;
+  }
+  #panel input:focus, #panel select:focus, #panel textarea:focus {
+    outline: none; border-color: #0071e3; background: #fff;
+  }
+  #panel textarea { resize: vertical; min-height: 60px; }
+  .row { display: flex; gap: 8px; }
+  .row > div { flex: 1; }
+  .actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .actions button {
+    padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 500;
+  }
+  .btn-primary { background: #0071e3; color: #fff; }
+  .btn-primary:hover { background: #0077ed; }
+  .btn-secondary { background: #e0e0e2; color: #1d1d1f; }
+  .btn-secondary:hover { background: #d0d0d4; }
+  .btn-danger { background: #ff3b30; color: #fff; }
+  .btn-danger:hover { background: #ff5a4e; }
+  .btn-danger:disabled { background: #f0a5a0; cursor: not-allowed; }
+
+  #graph-wrapper { flex: 1; background: #f5f5f7; }
+  #graph { background: #f5f5f7; }
+  #status {
+    position: fixed; bottom: 16px; right: 16px; background: #1d1d1f; color: #fff;
+    padding: 10px 16px; border-radius: 8px; font-size: 13px;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  #status.show { opacity: 1; }
+  #empty-hint {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #999; font-size: 14px; text-align: center; pointer-events: none;
+  }
+  .editing-badge {
+    display: inline-block; background: #ffcc00; color: #1d1d1f;
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🐾 SHELAGH</h1>
+  <span style="font-size:12px;color:#999;">Animal Genealogy Tracker</span>
+  <div class="spacer"></div>
+  <input type="search" id="search" placeholder="Search animals…" />
+  <button id="btn-export">Export JSON</button>
+  <button id="btn-import">Import JSON</button>
+  <input type="file" id="file-import" accept=".json" style="display:none" />
+  <button id="btn-clear-all" class="danger">Clear All</button>
+</header>
+
+<main>
+  <aside id="panel">
+    <h2>Animal Details <span id="editing-badge" class="editing-badge" style="display:none">EDITING</span></h2>
+    <input type="hidden" id="f-id" />
+
+    <label for="f-name">Name *</label>
+    <input type="text" id="f-name" placeholder="e.g. Bella" />
+
+    <div class="row">
+      <div>
+        <label for="f-sex">Sex</label>
+        <select id="f-sex">
+          <option value="U">Unknown</option>
+          <option value="M">Male</option>
+          <option value="F">Female</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-breed">Breed</label>
+        <input type="text" id="f-breed" placeholder="e.g. Border Collie" />
+      </div>
+    </div>
+
+    <label for="f-color">Color / Markings</label>
+    <input type="text" id="f-color" placeholder="e.g. black and white" />
+
+    <div class="row">
+      <div>
+        <label for="f-dob">Date of Birth</label>
+        <input type="date" id="f-dob" />
+      </div>
+      <div>
+        <label for="f-dod">Date of Death</label>
+        <input type="date" id="f-dod" />
+      </div>
+    </div>
+
+    <label for="f-sibling">Copy parents from sibling <span style="color:#999;font-weight:400;">(optional shortcut)</span></label>
+    <select id="f-sibling">
+      <option value="">— pick an animal to copy its parents —</option>
+    </select>
+    <div style="font-size:11px;color:#888;margin-top:3px;">Tip: pick a sibling to auto-fill both parents, then override Father or Mother below for a half-sibling.</div>
+
+    <label for="f-father">Father</label>
+    <select id="f-father"><option value="">— none —</option></select>
+
+    <label for="f-mother">Mother</label>
+    <select id="f-mother"><option value="">— none —</option></select>
+
+    <label for="f-notes">Notes</label>
+    <textarea id="f-notes" placeholder="Any additional info…"></textarea>
+
+    <div class="actions">
+      <button id="btn-save" class="btn-primary">Save</button>
+      <button id="btn-new" class="btn-secondary">New / Clear</button>
+      <button id="btn-delete" class="btn-danger" disabled>Delete</button>
+    </div>
+  </aside>
+
+  <div id="graph-wrapper" style="flex:1; position:relative;">
+    <div id="graph" style="width:100%; height:100%;"></div>
+    <div id="empty-hint">Add your first animal using the form on the left →<br/>then connect parents to build the family tree.</div>
+  </div>
+</main>
+
+<div id="status"></div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'shelagh.animals.v1';
+  let animals = [];
+  let network = null;
+  let nodesDS = null;
+  let edgesDS = null;
+  let editingId = null;
+
+  // ---------- storage ----------
+  function loadAnimals() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      animals = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      console.error('Failed to load', e);
+      animals = [];
+    }
+  }
+  function saveAnimals() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(animals));
+  }
+  function uuid() {
+    return 'a-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ---------- helpers ----------
+  function getById(id) { return animals.find(a => a.id === id) || null; }
+  function getDescendantIds(id) {
+    // walk downward — find everything that descends from id
+    const out = new Set();
+    function walk(pid) {
+      for (const a of animals) {
+        if ((a.fatherId === pid || a.motherId === pid) && !out.has(a.id)) {
+          out.add(a.id);
+          walk(a.id);
+        }
+      }
+    }
+    walk(id);
+    return out;
+  }
+  function showStatus(msg) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(showStatus._t);
+    showStatus._t = setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  // ---------- form ----------
+  const F = {
+    id: document.getElementById('f-id'),
+    name: document.getElementById('f-name'),
+    sex: document.getElementById('f-sex'),
+    breed: document.getElementById('f-breed'),
+    color: document.getElementById('f-color'),
+    dob: document.getElementById('f-dob'),
+    dod: document.getElementById('f-dod'),
+    father: document.getElementById('f-father'),
+    mother: document.getElementById('f-mother'),
+    sibling: document.getElementById('f-sibling'),
+    notes: document.getElementById('f-notes'),
+  };
+
+  function populateParentDropdowns(excludeId) {
+    const excluded = new Set();
+    if (excludeId) {
+      excluded.add(excludeId);
+      for (const d of getDescendantIds(excludeId)) excluded.add(d);
+    }
+    const males = animals.filter(a => a.sex === 'M' && !excluded.has(a.id));
+    const females = animals.filter(a => a.sex === 'F' && !excluded.has(a.id));
+    // Allow unknown-sex animals as either parent too (fallback)
+    const unknowns = animals.filter(a => a.sex === 'U' && !excluded.has(a.id));
+
+    const currentFather = F.father.value;
+    const currentMother = F.mother.value;
+
+    F.father.innerHTML = '<option value="">— none —</option>';
+    [...males, ...unknowns].forEach(a => {
+      const o = document.createElement('option');
+      o.value = a.id;
+      o.textContent = a.name + (a.breed ? ' (' + a.breed + ')' : '');
+      F.father.appendChild(o);
+    });
+
+    F.mother.innerHTML = '<option value="">— none —</option>';
+    [...females, ...unknowns].forEach(a => {
+      const o = document.createElement('option');
+      o.value = a.id;
+      o.textContent = a.name + (a.breed ? ' (' + a.breed + ')' : '');
+      F.mother.appendChild(o);
+    });
+
+    F.father.value = currentFather;
+    F.mother.value = currentMother;
+
+    // Sibling helper dropdown — list every animal (except self + descendants)
+    // that has at least one parent assigned, since copying "no parents" is pointless
+    const currentSibling = F.sibling.value;
+    F.sibling.innerHTML = '<option value="">— pick an animal to copy its parents —</option>';
+    animals
+      .filter(a => !excluded.has(a.id) && (a.fatherId || a.motherId))
+      .forEach(a => {
+        const o = document.createElement('option');
+        o.value = a.id;
+        const parts = [];
+        if (a.fatherId) { const f = getById(a.fatherId); if (f) parts.push('♂ ' + f.name); }
+        if (a.motherId) { const m = getById(a.motherId); if (m) parts.push('♀ ' + m.name); }
+        o.textContent = a.name + ' — ' + parts.join(' + ');
+        F.sibling.appendChild(o);
+      });
+    F.sibling.value = currentSibling;
+  }
+
+  function clearForm() {
+    editingId = null;
+    F.id.value = '';
+    F.name.value = '';
+    F.sex.value = 'U';
+    F.breed.value = '';
+    F.color.value = '';
+    F.dob.value = '';
+    F.dod.value = '';
+    F.notes.value = '';
+    populateParentDropdowns(null);
+    F.father.value = '';
+    F.mother.value = '';
+    F.sibling.value = '';
+    document.getElementById('editing-badge').style.display = 'none';
+    document.getElementById('btn-delete').disabled = true;
+    F.name.focus();
+  }
+
+  function loadIntoForm(id) {
+    const a = getById(id);
+    if (!a) return;
+    editingId = id;
+    F.id.value = a.id;
+    F.name.value = a.name || '';
+    F.sex.value = a.sex || 'U';
+    F.breed.value = a.breed || '';
+    F.color.value = a.color || '';
+    F.dob.value = a.dob || '';
+    F.dod.value = a.dod || '';
+    F.notes.value = a.notes || '';
+    populateParentDropdowns(id);
+    F.father.value = a.fatherId || '';
+    F.mother.value = a.motherId || '';
+    document.getElementById('editing-badge').style.display = 'inline-block';
+    document.getElementById('btn-delete').disabled = false;
+  }
+
+  function saveForm() {
+    const name = F.name.value.trim();
+    if (!name) {
+      showStatus('Name is required');
+      F.name.focus();
+      return;
+    }
+    const data = {
+      name: name,
+      sex: F.sex.value,
+      breed: F.breed.value.trim(),
+      color: F.color.value.trim(),
+      dob: F.dob.value,
+      dod: F.dod.value,
+      fatherId: F.father.value || null,
+      motherId: F.mother.value || null,
+      notes: F.notes.value.trim(),
+    };
+    const wasNew = !editingId;
+    if (editingId) {
+      const idx = animals.findIndex(a => a.id === editingId);
+      if (idx >= 0) animals[idx] = { ...animals[idx], ...data };
+      showStatus('Updated ' + name);
+    } else {
+      const newAnimal = { id: uuid(), ...data };
+      animals.push(newAnimal);
+      editingId = newAnimal.id;
+      showStatus('Added ' + name);
+    }
+    saveAnimals();
+    renderGraph();
+    if (wasNew) {
+      // Auto-clear so the next animal can be entered immediately
+      clearForm();
+    } else {
+      loadIntoForm(editingId);
+    }
+  }
+
+  function deleteCurrent() {
+    if (!editingId) return;
+    const a = getById(editingId);
+    if (!a) return;
+    if (!confirm('Delete "' + a.name + '"? Children\'s parent references will be cleared.')) return;
+    // null out references in children
+    for (const child of animals) {
+      if (child.fatherId === editingId) child.fatherId = null;
+      if (child.motherId === editingId) child.motherId = null;
+    }
+    animals = animals.filter(x => x.id !== editingId);
+    saveAnimals();
+    clearForm();
+    renderGraph();
+    showStatus('Deleted ' + a.name);
+  }
+
+  // ---------- graph ----------
+  function colorFor(sex) {
+    if (sex === 'M') return { background: '#b3d9ff', border: '#0071e3' };
+    if (sex === 'F') return { background: '#ffc9d9', border: '#e3007a' };
+    return { background: '#e0e0e2', border: '#888' };
+  }
+  function buildNode(a) {
+    const tooltip =
+      a.name +
+      (a.breed ? ' — ' + a.breed : '') +
+      (a.sex && a.sex !== 'U' ? ' (' + (a.sex === 'M' ? 'Male' : 'Female') + ')' : '') +
+      (a.color ? '\nColor: ' + a.color : '') +
+      (a.dob ? '\nBorn: ' + a.dob : '') +
+      (a.dod ? '\nDied: ' + a.dod : '') +
+      (a.notes ? '\nNotes: ' + a.notes : '');
+    return {
+      id: a.id,
+      label: a.name + (a.breed ? '\n' + a.breed : ''),
+      title: tooltip,
+      color: colorFor(a.sex),
+      shape: 'box',
+      font: { size: 14, face: 'sans-serif' },
+      margin: 10,
+    };
+  }
+  function buildEdges(a) {
+    const es = [];
+    if (a.fatherId && getById(a.fatherId)) {
+      es.push({ id: 'f-' + a.id, from: a.fatherId, to: a.id, color: { color: '#0071e3' }, arrows: 'to' });
+    }
+    if (a.motherId && getById(a.motherId)) {
+      es.push({ id: 'm-' + a.id, from: a.motherId, to: a.id, color: { color: '#e3007a' }, arrows: 'to' });
+    }
+    return es;
+  }
+
+  function initGraph() {
+    const container = document.getElementById('graph');
+    nodesDS = new vis.DataSet([]);
+    edgesDS = new vis.DataSet([]);
+    const options = {
+      layout: {
+        hierarchical: {
+          enabled: true,
+          direction: 'UD',
+          sortMethod: 'directed',
+          nodeSpacing: 140,
+          levelSeparation: 120,
+        },
+      },
+      physics: { enabled: false },
+      interaction: { hover: true, tooltipDelay: 200, dragNodes: true },
+      edges: { smooth: { type: 'cubicBezier', roundness: 0.4 } },
+    };
+    network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, options);
+    network.on('click', (params) => {
+      if (params.nodes.length > 0) loadIntoForm(params.nodes[0]);
+    });
+  }
+
+  function renderGraph() {
+    const hint = document.getElementById('empty-hint');
+    if (hint) hint.style.display = animals.length === 0 ? 'block' : 'none';
+    if (!nodesDS || !edgesDS) return;
+
+    const newNodes = animals.map(buildNode);
+    const newEdges = animals.flatMap(buildEdges);
+
+    // Full replace — simplest and avoids stale references
+    nodesDS.clear();
+    edgesDS.clear();
+    nodesDS.add(newNodes);
+    edgesDS.add(newEdges);
+
+    // Force re-layout so new nodes appear immediately
+    network.setOptions({
+      layout: {
+        hierarchical: {
+          enabled: animals.length > 0,
+          direction: 'UD',
+          sortMethod: 'directed',
+          nodeSpacing: 140,
+          levelSeparation: 120,
+        },
+      },
+    });
+    if (animals.length > 0) {
+      network.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+    }
+  }
+
+  // ---------- search ----------
+  function handleSearch(query) {
+    if (!query || !network) return;
+    const q = query.toLowerCase();
+    const match = animals.find(a =>
+      (a.name && a.name.toLowerCase().includes(q)) ||
+      (a.breed && a.breed.toLowerCase().includes(q))
+    );
+    if (match) {
+      network.selectNodes([match.id]);
+      network.focus(match.id, { scale: 1.2, animation: true });
+      loadIntoForm(match.id);
+    } else {
+      showStatus('No match for "' + query + '"');
+    }
+  }
+
+  // ---------- import/export ----------
+  function exportJSON() {
+    const blob = new Blob([JSON.stringify(animals, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'shelagh-animals-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('Exported ' + animals.length + ' animals');
+  }
+  function importJSON(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (!Array.isArray(parsed)) throw new Error('not an array');
+        if (animals.length > 0 && !confirm('Replace current ' + animals.length + ' animals with ' + parsed.length + ' from file?')) return;
+        animals = parsed;
+        saveAnimals();
+        clearForm();
+        renderGraph();
+        showStatus('Imported ' + animals.length + ' animals');
+      } catch (err) {
+        alert('Invalid JSON file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- wire up ----------
+  document.getElementById('btn-save').addEventListener('click', saveForm);
+  document.getElementById('btn-new').addEventListener('click', clearForm);
+  document.getElementById('btn-delete').addEventListener('click', deleteCurrent);
+  document.getElementById('btn-export').addEventListener('click', exportJSON);
+  document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-import').click());
+  document.getElementById('file-import').addEventListener('change', (e) => {
+    if (e.target.files[0]) importJSON(e.target.files[0]);
+    e.target.value = '';
+  });
+  document.getElementById('btn-clear-all').addEventListener('click', () => {
+    if (animals.length === 0) return;
+    if (!confirm('Delete ALL ' + animals.length + ' animals? This cannot be undone.')) return;
+    animals = [];
+    saveAnimals();
+    clearForm();
+    renderGraph();
+    showStatus('Cleared all');
+  });
+  document.getElementById('search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleSearch(e.target.value.trim());
+  });
+  // Keep sex changes updating dropdowns so user can't self-father an existing animal after a sex change
+  F.sex.addEventListener('change', () => {
+    populateParentDropdowns(editingId);
+  });
+
+  // Sibling shortcut: copy chosen animal's parents into this form
+  F.sibling.addEventListener('change', () => {
+    const sib = getById(F.sibling.value);
+    if (!sib) return;
+    // Only populate a slot if that parent still exists and is selectable
+    if (sib.fatherId && F.father.querySelector('option[value="' + sib.fatherId + '"]')) {
+      F.father.value = sib.fatherId;
+    }
+    if (sib.motherId && F.mother.querySelector('option[value="' + sib.motherId + '"]')) {
+      F.mother.value = sib.motherId;
+    }
+    showStatus('Copied parents from ' + sib.name + ' — override Father or Mother for a half-sibling');
+    // Reset dropdown so the same choice can be picked again later
+    F.sibling.value = '';
+  });
+
+  // ---------- init ----------
+  loadAnimals();
+  initGraph();
+  clearForm();
+  renderGraph();
+})();
+</script>
+</body>
+</html>
