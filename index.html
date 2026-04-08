@@ -338,19 +338,51 @@
   }
 
   // ---------- storage ----------
-  function loadAnimals() {
+  // Server is source of truth (so data syncs across devices). localStorage is a
+  // fallback cache used only if the server is unreachable (e.g. offline).
+  let serverAvailable = false;
+  let syncTimer = null;
+
+  function normalizeBook(b) {
+    if (!b || !Array.isArray(b.sheets) || b.sheets.length === 0) {
+      return makeFreshBook();
+    }
+    if (!b.activeSheetId || !b.sheets.find(s => s.id === b.activeSheetId)) {
+      b.activeSheetId = b.sheets[0].id;
+    }
+    if (!Array.isArray(b.vaccines)) b.vaccines = [];
+    return b;
+  }
+
+  async function loadAnimals() {
+    // 1) Try the server
+    try {
+      const res = await fetch('/api/data', { cache: 'no-store' });
+      if (res.ok) {
+        serverAvailable = true;
+        const txt = await res.text();
+        if (txt && txt !== 'null') {
+          try {
+            book = normalizeBook(JSON.parse(txt));
+            animals = activeSheet().animals;
+            // Update local cache
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(book));
+            return;
+          } catch (e) {
+            console.error('Bad server JSON, falling back to local cache', e);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Server unreachable, using local cache', e);
+    }
+
+    // 2) Fall back to localStorage
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        book = JSON.parse(raw);
-        if (!book || !Array.isArray(book.sheets) || book.sheets.length === 0) {
-          book = makeFreshBook();
-        }
-        if (!book.activeSheetId || !book.sheets.find(s => s.id === book.activeSheetId)) {
-          book.activeSheetId = book.sheets[0].id;
-        }
+        book = normalizeBook(JSON.parse(raw));
       } else {
-        // Migrate legacy single-list storage if it exists
         const legacy = localStorage.getItem(LEGACY_KEY);
         if (legacy) {
           const legacyAnimals = JSON.parse(legacy);
@@ -367,16 +399,37 @@
       console.error('Failed to load book', e);
       book = makeFreshBook();
     }
-    // Ensure vaccines array exists (migration for older v2 books)
     if (!Array.isArray(book.vaccines)) book.vaccines = [];
-    // Point local 'animals' at the active sheet's array (by reference)
     animals = activeSheet().animals;
+
+    // If the server was reachable but empty, push our local state up so both match
+    if (serverAvailable) scheduleServerSync(0);
   }
+
+  function scheduleServerSync(delayMs) {
+    if (!serverAvailable) return;
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(async () => {
+      syncTimer = null;
+      try {
+        const res = await fetch('/api/data', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(book),
+        });
+        if (!res.ok) console.error('Server sync failed:', res.status);
+      } catch (e) {
+        console.error('Server sync error:', e);
+      }
+    }, delayMs == null ? 600 : delayMs);
+  }
+
   function saveAnimals() {
     // Make sure the active sheet's array reflects whatever 'animals' currently is
     const s = activeSheet();
     if (s) s.animals = animals;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(book));
+    scheduleServerSync();
   }
   function uuid() {
     return 'a-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
@@ -1234,11 +1287,13 @@
   });
 
   // ---------- init ----------
-  loadAnimals();
-  initGraph();
-  clearForm();
-  renderGraph();
-  renderSheetBar();
+  (async () => {
+    await loadAnimals();
+    initGraph();
+    clearForm();
+    renderGraph();
+    renderSheetBar();
+  })();
 })();
 </script>
 </body>
