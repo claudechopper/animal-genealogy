@@ -62,6 +62,71 @@
 
   #graph-wrapper { flex: 1; background: #f5f5f7; }
   #graph { background: #f5f5f7; }
+
+  /* Sheet bar (sub-header) */
+  #sheet-bar {
+    background: #2c2c2e; color: #fff; padding: 8px 20px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    border-bottom: 1px solid #3a3a3c;
+  }
+  #sheet-bar label { font-size: 12px; color: #aaa; font-weight: 500; }
+  #sheet-bar select {
+    padding: 5px 10px; border-radius: 6px; border: 1px solid #444;
+    background: #1d1d1f; color: #fff; font-size: 13px; min-width: 180px;
+  }
+  #sheet-bar button {
+    padding: 5px 10px; border-radius: 6px; border: 1px solid #444;
+    background: #1d1d1f; color: #fff; cursor: pointer; font-size: 12px;
+  }
+  #sheet-bar button:hover { background: #3a3a3c; }
+  #sheet-bar button.danger { border-color: #8a1f1f; }
+  #sheet-bar button.danger:hover { background: #5a1414; }
+
+  /* Floating graph controls */
+  #graph-controls {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(255,255,255,0.95); border: 1px solid #d0d0d4; border-radius: 10px;
+    padding: 8px; display: grid; gap: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    z-index: 10;
+  }
+  #graph-controls .ctrl-row { display: flex; gap: 4px; justify-content: center; }
+  #graph-controls button {
+    width: 32px; height: 32px; border: 1px solid #d0d0d4; border-radius: 6px;
+    background: #fff; cursor: pointer; font-size: 14px; color: #1d1d1f;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    font-family: -apple-system, sans-serif;
+  }
+  #graph-controls button:hover { background: #f0f0f2; border-color: #0071e3; }
+  #graph-controls button.wide { width: auto; padding: 0 10px; font-size: 11px; }
+
+  main { height: calc(100vh - 56px - 40px); }
+
+  /* Vaccine chips */
+  #vaccine-chips {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; min-height: 24px;
+    padding: 4px; border: 1px dashed #d0d0d4; border-radius: 6px; background: #fafafa;
+  }
+  #vaccine-chips:empty::before {
+    content: 'No vaccines added yet'; color: #aaa; font-size: 11px; font-style: italic; padding: 2px 4px;
+  }
+  .vaccine-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #e3f2fd; color: #0056b3; border: 1px solid #90caf9;
+    padding: 2px 4px 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
+  }
+  .vaccine-chip button {
+    background: none; border: none; color: #0056b3; cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 0 2px; font-weight: bold;
+  }
+  .vaccine-chip button:hover { color: #ff3b30; }
+  .vaccine-row { display: flex; gap: 6px; margin-top: 6px; }
+  .vaccine-row select, .vaccine-row input { flex: 1; }
+  .vaccine-row button {
+    padding: 7px 12px; border: 1px solid #0071e3; background: #0071e3; color: #fff;
+    border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;
+  }
+  .vaccine-row button:hover { background: #0077ed; }
   #status {
     position: fixed; bottom: 16px; right: 16px; background: #1d1d1f; color: #fff;
     padding: 10px 16px; border-radius: 8px; font-size: 13px;
@@ -77,6 +142,22 @@
     padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
     margin-left: 8px;
   }
+
+  /* Settings menu */
+  .settings-wrap { position: relative; }
+  #settings-menu {
+    position: absolute; right: 0; top: calc(100% + 6px);
+    background: #2c2c2e; border: 1px solid #444; border-radius: 8px;
+    padding: 6px; min-width: 180px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    display: none; flex-direction: column; gap: 4px; z-index: 100;
+  }
+  #settings-menu.open { display: flex; }
+  #settings-menu button {
+    width: 100%; text-align: left; padding: 8px 12px; border-radius: 6px;
+    border: none; background: transparent; color: #fff; cursor: pointer; font-size: 13px;
+  }
+  #settings-menu button:hover { background: #3a3a3c; }
 </style>
 </head>
 <body>
@@ -86,11 +167,29 @@
   <span style="font-size:12px;color:#999;">Animal Genealogy Tracker</span>
   <div class="spacer"></div>
   <input type="search" id="search" placeholder="Search animals…" />
-  <button id="btn-export">Export JSON</button>
-  <button id="btn-import">Import JSON</button>
+  <div class="settings-wrap">
+    <button id="btn-settings" title="Settings">⚙ Settings ▾</button>
+    <div id="settings-menu">
+      <button id="btn-export">Export JSON</button>
+      <button id="btn-export-mind">Export Mind Map (OPML)</button>
+      <button id="btn-import">Import JSON</button>
+      <button id="btn-import-opml">Import OPML</button>
+    </div>
+  </div>
   <input type="file" id="file-import" accept=".json" style="display:none" />
+  <input type="file" id="file-import-opml" accept=".opml,.xml" style="display:none" />
   <button id="btn-clear-all" class="danger">Clear All</button>
 </header>
+
+<div id="sheet-bar">
+  <label for="sheet-select">Sheet (animal type):</label>
+  <select id="sheet-select"></select>
+  <button id="btn-new-sheet">+ New Sheet</button>
+  <button id="btn-rename-sheet">Rename</button>
+  <button id="btn-delete-sheet" class="danger">Delete Sheet</button>
+  <span style="flex:1"></span>
+  <span id="sheet-count" style="font-size:12px;color:#aaa;"></span>
+</div>
 
 <main>
   <aside id="panel">
@@ -112,6 +211,16 @@
       <div>
         <label for="f-breed">Breed</label>
         <input type="text" id="f-breed" placeholder="e.g. Border Collie" />
+      </div>
+    </div>
+
+    <label for="f-group">Group / Category <span style="color:#999;font-weight:400;">(shown above the node)</span></label>
+    <div class="row">
+      <div style="flex:2;">
+        <input type="text" id="f-group" placeholder="e.g. Group 1, Pasture A, Stallions" />
+      </div>
+      <div style="flex:1;">
+        <input type="color" id="f-group-color" value="#ff9500" title="Group label color" style="height:33px;padding:2px;" />
       </div>
     </div>
 
@@ -141,6 +250,19 @@
     <label for="f-mother">Mother</label>
     <select id="f-mother"><option value="">— none —</option></select>
 
+    <label>Vaccines Received <span style="color:#999;font-weight:400;">(shared list across all sheets)</span></label>
+    <div id="vaccine-chips"></div>
+    <div class="vaccine-row">
+      <select id="f-vaccine-select">
+        <option value="">— pick existing —</option>
+      </select>
+      <button type="button" id="btn-add-vaccine">Add</button>
+    </div>
+    <div class="vaccine-row">
+      <input type="text" id="f-vaccine-new" placeholder="…or type a new vaccine name" />
+      <button type="button" id="btn-add-new-vaccine">+ New</button>
+    </div>
+
     <label for="f-notes">Notes</label>
     <textarea id="f-notes" placeholder="Any additional info…"></textarea>
 
@@ -154,6 +276,24 @@
   <div id="graph-wrapper" style="flex:1; position:relative;">
     <div id="graph" style="width:100%; height:100%;"></div>
     <div id="empty-hint">Add your first animal using the form on the left →<br/>then connect parents to build the family tree.</div>
+    <div id="graph-controls">
+      <div class="ctrl-row">
+        <button id="ctrl-up" title="Pan up">▲</button>
+      </div>
+      <div class="ctrl-row">
+        <button id="ctrl-left" title="Pan left">◀</button>
+        <button id="ctrl-fit" title="Fit to view" class="wide">FIT</button>
+        <button id="ctrl-right" title="Pan right">▶</button>
+      </div>
+      <div class="ctrl-row">
+        <button id="ctrl-down" title="Pan down">▼</button>
+      </div>
+      <div class="ctrl-row" style="margin-top:4px;border-top:1px solid #e0e0e2;padding-top:4px;">
+        <button id="ctrl-zoom-out" title="Zoom out">−</button>
+        <button id="ctrl-zoom-reset" title="Reset zoom" class="wide">100%</button>
+        <button id="ctrl-zoom-in" title="Zoom in">+</button>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -161,25 +301,82 @@
 
 <script>
 (function() {
-  const STORAGE_KEY = 'shelagh.animals.v1';
-  let animals = [];
+  const STORAGE_KEY = 'shelagh.book.v2';
+  const LEGACY_KEY = 'shelagh.animals.v1';
+
+  // book = { sheets: [{ id, name, animals: [...] }], activeSheetId }
+  let book = { sheets: [], activeSheetId: null };
+  let animals = []; // mirror of the active sheet's animals array — kept in sync
   let network = null;
   let nodesDS = null;
   let edgesDS = null;
   let editingId = null;
 
+  function sheetId() {
+    return 's-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+  }
+  function activeSheet() {
+    return book.sheets.find(s => s.id === book.activeSheetId) || book.sheets[0] || null;
+  }
+  function makeFreshBook() {
+    const s = { id: sheetId(), name: 'Animals', animals: [] };
+    return { sheets: [s], activeSheetId: s.id, vaccines: [] };
+  }
+  function getVaccineCatalog() {
+    if (!Array.isArray(book.vaccines)) book.vaccines = [];
+    return book.vaccines;
+  }
+  function addToVaccineCatalog(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+    const cat = getVaccineCatalog();
+    const existing = cat.find(v => v.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    cat.push(trimmed);
+    cat.sort((a, b) => a.localeCompare(b));
+    return trimmed;
+  }
+
   // ---------- storage ----------
   function loadAnimals() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      animals = raw ? JSON.parse(raw) : [];
+      if (raw) {
+        book = JSON.parse(raw);
+        if (!book || !Array.isArray(book.sheets) || book.sheets.length === 0) {
+          book = makeFreshBook();
+        }
+        if (!book.activeSheetId || !book.sheets.find(s => s.id === book.activeSheetId)) {
+          book.activeSheetId = book.sheets[0].id;
+        }
+      } else {
+        // Migrate legacy single-list storage if it exists
+        const legacy = localStorage.getItem(LEGACY_KEY);
+        if (legacy) {
+          const legacyAnimals = JSON.parse(legacy);
+          book = {
+            sheets: [{ id: sheetId(), name: 'Animals', animals: Array.isArray(legacyAnimals) ? legacyAnimals : [] }],
+            activeSheetId: null,
+          };
+          book.activeSheetId = book.sheets[0].id;
+        } else {
+          book = makeFreshBook();
+        }
+      }
     } catch (e) {
-      console.error('Failed to load', e);
-      animals = [];
+      console.error('Failed to load book', e);
+      book = makeFreshBook();
     }
+    // Ensure vaccines array exists (migration for older v2 books)
+    if (!Array.isArray(book.vaccines)) book.vaccines = [];
+    // Point local 'animals' at the active sheet's array (by reference)
+    animals = activeSheet().animals;
   }
   function saveAnimals() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(animals));
+    // Make sure the active sheet's array reflects whatever 'animals' currently is
+    const s = activeSheet();
+    if (s) s.animals = animals;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(book));
   }
   function uuid() {
     return 'a-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
@@ -210,11 +407,16 @@
   }
 
   // ---------- form ----------
+  // Vaccines being edited in the form right now (array of strings)
+  let currentVaccines = [];
+
   const F = {
     id: document.getElementById('f-id'),
     name: document.getElementById('f-name'),
     sex: document.getElementById('f-sex'),
     breed: document.getElementById('f-breed'),
+    group: document.getElementById('f-group'),
+    groupColor: document.getElementById('f-group-color'),
     color: document.getElementById('f-color'),
     dob: document.getElementById('f-dob'),
     dod: document.getElementById('f-dod'),
@@ -222,7 +424,53 @@
     mother: document.getElementById('f-mother'),
     sibling: document.getElementById('f-sibling'),
     notes: document.getElementById('f-notes'),
+    vaccineSelect: document.getElementById('f-vaccine-select'),
+    vaccineNew: document.getElementById('f-vaccine-new'),
+    vaccineChips: document.getElementById('vaccine-chips'),
   };
+
+  function renderVaccineChips() {
+    F.vaccineChips.innerHTML = '';
+    currentVaccines.forEach((v, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'vaccine-chip';
+      chip.textContent = v;
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.textContent = '×';
+      x.title = 'Remove';
+      x.addEventListener('click', () => {
+        currentVaccines.splice(i, 1);
+        renderVaccineChips();
+      });
+      chip.appendChild(x);
+      F.vaccineChips.appendChild(chip);
+    });
+  }
+  function renderVaccineCatalogDropdown() {
+    const cat = getVaccineCatalog();
+    F.vaccineSelect.innerHTML = '<option value="">— pick existing —</option>';
+    cat.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      F.vaccineSelect.appendChild(o);
+    });
+  }
+  function addVaccineToCurrent(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return;
+    // Case-insensitive dedupe within the current animal
+    if (currentVaccines.some(v => v.toLowerCase() === trimmed.toLowerCase())) {
+      showStatus('"' + trimmed + '" already added to this animal');
+      return;
+    }
+    const canonical = addToVaccineCatalog(trimmed);
+    currentVaccines.push(canonical);
+    saveAnimals(); // persist the catalog change immediately even if user doesn't save the form
+    renderVaccineChips();
+    renderVaccineCatalogDropdown();
+  }
 
   function populateParentDropdowns(excludeId) {
     const excluded = new Set();
@@ -281,6 +529,8 @@
     F.name.value = '';
     F.sex.value = 'U';
     F.breed.value = '';
+    F.group.value = '';
+    F.groupColor.value = '#ff9500';
     F.color.value = '';
     F.dob.value = '';
     F.dod.value = '';
@@ -289,6 +539,11 @@
     F.father.value = '';
     F.mother.value = '';
     F.sibling.value = '';
+    currentVaccines = [];
+    F.vaccineNew.value = '';
+    F.vaccineSelect.value = '';
+    renderVaccineChips();
+    renderVaccineCatalogDropdown();
     document.getElementById('editing-badge').style.display = 'none';
     document.getElementById('btn-delete').disabled = true;
     F.name.focus();
@@ -302,6 +557,8 @@
     F.name.value = a.name || '';
     F.sex.value = a.sex || 'U';
     F.breed.value = a.breed || '';
+    F.group.value = a.group || '';
+    F.groupColor.value = a.groupColor || '#ff9500';
     F.color.value = a.color || '';
     F.dob.value = a.dob || '';
     F.dod.value = a.dod || '';
@@ -309,6 +566,11 @@
     populateParentDropdowns(id);
     F.father.value = a.fatherId || '';
     F.mother.value = a.motherId || '';
+    currentVaccines = Array.isArray(a.vaccines) ? a.vaccines.slice() : [];
+    F.vaccineNew.value = '';
+    F.vaccineSelect.value = '';
+    renderVaccineChips();
+    renderVaccineCatalogDropdown();
     document.getElementById('editing-badge').style.display = 'inline-block';
     document.getElementById('btn-delete').disabled = false;
   }
@@ -324,12 +586,15 @@
       name: name,
       sex: F.sex.value,
       breed: F.breed.value.trim(),
+      group: F.group.value.trim(),
+      groupColor: F.groupColor.value || '#ff9500',
       color: F.color.value.trim(),
       dob: F.dob.value,
       dod: F.dod.value,
       fatherId: F.father.value || null,
       motherId: F.mother.value || null,
       notes: F.notes.value.trim(),
+      vaccines: currentVaccines.slice(),
     };
     const wasNew = !editingId;
     if (editingId) {
@@ -344,6 +609,7 @@
     }
     saveAnimals();
     renderGraph();
+    renderSheetBar();
     if (wasNew) {
       // Auto-clear so the next animal can be entered immediately
       clearForm();
@@ -380,17 +646,33 @@
       a.name +
       (a.breed ? ' — ' + a.breed : '') +
       (a.sex && a.sex !== 'U' ? ' (' + (a.sex === 'M' ? 'Male' : 'Female') + ')' : '') +
+      (a.group ? '\nGroup: ' + a.group : '') +
       (a.color ? '\nColor: ' + a.color : '') +
       (a.dob ? '\nBorn: ' + a.dob : '') +
       (a.dod ? '\nDied: ' + a.dod : '') +
+      (Array.isArray(a.vaccines) && a.vaccines.length ? '\nVaccines: ' + a.vaccines.join(', ') : '') +
       (a.notes ? '\nNotes: ' + a.notes : '');
+
+    // Group label rendered above the name using vis-network's multi-font support
+    // (mod = colored, bigger, bold). The 'multi' option enables per-line styling.
+    const lines = [];
+    if (a.group) lines.push('*' + a.group + '*');
+    lines.push(a.name);
+    if (a.breed) lines.push('_' + a.breed + '_');
+
     return {
       id: a.id,
-      label: a.name + (a.breed ? '\n' + a.breed : ''),
+      label: lines.join('\n'),
       title: tooltip,
       color: colorFor(a.sex),
       shape: 'box',
-      font: { size: 14, face: 'sans-serif' },
+      font: {
+        size: 14,
+        face: 'sans-serif',
+        multi: 'md',
+        bold: { color: a.groupColor || '#ff9500', size: 13, face: 'sans-serif', vadjust: -2 },
+        ital: { color: '#666', size: 11, face: 'sans-serif' },
+      },
       margin: 10,
     };
   }
@@ -460,17 +742,105 @@
     }
   }
 
+  // ---------- sheets ----------
+  function renderSheetBar() {
+    const sel = document.getElementById('sheet-select');
+    sel.innerHTML = '';
+    book.sheets.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.name + ' (' + s.animals.length + ')';
+      sel.appendChild(o);
+    });
+    sel.value = book.activeSheetId;
+    document.getElementById('sheet-count').textContent =
+      book.sheets.length + ' sheet' + (book.sheets.length === 1 ? '' : 's');
+  }
+  function switchSheet(id) {
+    if (!book.sheets.find(s => s.id === id)) return;
+    book.activeSheetId = id;
+    animals = activeSheet().animals;
+    saveAnimals();
+    clearForm();
+    renderGraph();
+    renderSheetBar();
+    showStatus('Switched to ' + activeSheet().name);
+  }
+  function newSheet() {
+    const name = prompt('Name the new sheet (e.g. Horses, Sheep, Border Collies):');
+    if (!name || !name.trim()) return;
+    const s = { id: sheetId(), name: name.trim(), animals: [] };
+    book.sheets.push(s);
+    book.activeSheetId = s.id;
+    animals = s.animals;
+    saveAnimals();
+    clearForm();
+    renderGraph();
+    renderSheetBar();
+    showStatus('Created sheet: ' + s.name);
+  }
+  function renameSheet() {
+    const s = activeSheet();
+    if (!s) return;
+    const name = prompt('Rename sheet:', s.name);
+    if (!name || !name.trim()) return;
+    s.name = name.trim();
+    saveAnimals();
+    renderSheetBar();
+    showStatus('Renamed to ' + s.name);
+  }
+  function deleteSheet() {
+    if (book.sheets.length <= 1) {
+      alert('Cannot delete the only sheet. Create another one first.');
+      return;
+    }
+    const s = activeSheet();
+    if (!s) return;
+    if (!confirm('Delete sheet "' + s.name + '" and all ' + s.animals.length + ' animals in it? This cannot be undone.')) return;
+    book.sheets = book.sheets.filter(x => x.id !== s.id);
+    book.activeSheetId = book.sheets[0].id;
+    animals = activeSheet().animals;
+    saveAnimals();
+    clearForm();
+    renderGraph();
+    renderSheetBar();
+    showStatus('Deleted sheet: ' + s.name);
+  }
+
+  // ---------- graph controls ----------
+  function pan(dx, dy) {
+    if (!network) return;
+    const view = network.getViewPosition();
+    network.moveTo({ position: { x: view.x + dx, y: view.y + dy }, animation: { duration: 200, easingFunction: 'easeInOutQuad' } });
+  }
+  function zoomBy(factor) {
+    if (!network) return;
+    const scale = network.getScale() * factor;
+    network.moveTo({ scale, animation: { duration: 200, easingFunction: 'easeInOutQuad' } });
+  }
+  function resetZoom() {
+    if (!network) return;
+    network.moveTo({ scale: 1, animation: { duration: 200, easingFunction: 'easeInOutQuad' } });
+  }
+  function fitView() {
+    if (!network) return;
+    network.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+  }
+
   // ---------- search ----------
   function handleSearch(query) {
     if (!query || !network) return;
     const q = query.toLowerCase();
     const match = animals.find(a =>
       (a.name && a.name.toLowerCase().includes(q)) ||
-      (a.breed && a.breed.toLowerCase().includes(q))
+      (a.breed && a.breed.toLowerCase().includes(q)) ||
+      (a.group && a.group.toLowerCase().includes(q)) ||
+      (a.color && a.color.toLowerCase().includes(q)) ||
+      (Array.isArray(a.vaccines) && a.vaccines.some(v => v.toLowerCase().includes(q)))
     );
     if (match) {
       network.selectNodes([match.id]);
-      network.focus(match.id, { scale: 1.2, animation: true });
+      network.focus(match.id, { scale: 1.4, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
       loadIntoForm(match.id);
     } else {
       showStatus('No match for "' + query + '"');
@@ -479,27 +849,47 @@
 
   // ---------- import/export ----------
   function exportJSON() {
-    const blob = new Blob([JSON.stringify(animals, null, 2)], { type: 'application/json' });
+    // Export the whole book (all sheets) so users get a full backup
+    const blob = new Blob([JSON.stringify(book, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'shelagh-animals-' + new Date().toISOString().slice(0,10) + '.json';
+    a.download = 'shelagh-book-' + new Date().toISOString().slice(0,10) + '.json';
     a.click();
     URL.revokeObjectURL(url);
-    showStatus('Exported ' + animals.length + ' animals');
+    const total = book.sheets.reduce((n, s) => n + s.animals.length, 0);
+    showStatus('Exported ' + book.sheets.length + ' sheets, ' + total + ' animals');
   }
   function importJSON(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const parsed = JSON.parse(e.target.result);
-        if (!Array.isArray(parsed)) throw new Error('not an array');
-        if (animals.length > 0 && !confirm('Replace current ' + animals.length + ' animals with ' + parsed.length + ' from file?')) return;
-        animals = parsed;
+        let incomingBook;
+        if (Array.isArray(parsed)) {
+          // Legacy single-list export — wrap into a sheet
+          incomingBook = {
+            sheets: [{ id: sheetId(), name: 'Imported', animals: parsed }],
+            activeSheetId: null,
+          };
+          incomingBook.activeSheetId = incomingBook.sheets[0].id;
+        } else if (parsed && Array.isArray(parsed.sheets)) {
+          incomingBook = parsed;
+        } else {
+          throw new Error('not a valid SHELAGH export');
+        }
+        const total = incomingBook.sheets.reduce((n, s) => n + (s.animals ? s.animals.length : 0), 0);
+        if (!confirm('Replace ALL current sheets with ' + incomingBook.sheets.length + ' sheets (' + total + ' animals) from file?')) return;
+        book = incomingBook;
+        if (!book.activeSheetId || !book.sheets.find(s => s.id === book.activeSheetId)) {
+          book.activeSheetId = book.sheets[0].id;
+        }
+        animals = activeSheet().animals;
         saveAnimals();
         clearForm();
         renderGraph();
-        showStatus('Imported ' + animals.length + ' animals');
+        renderSheetBar();
+        showStatus('Imported ' + book.sheets.length + ' sheets');
       } catch (err) {
         alert('Invalid JSON file: ' + err.message);
       }
@@ -507,31 +897,324 @@
     reader.readAsText(file);
   }
 
+  // ---------- mind-map export (OPML — opens in MindNode, iThoughts, Freemind, etc.) ----------
+  function escapeXml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  }
+  function buildOpmlForSheet(sheet) {
+    // For mind-map programs: each animal becomes an outline node nested under its parents.
+    // An animal with two parents would create a cycle in pure tree form, so we use the
+    // father as the structural parent and add a note referencing the mother.
+    const list = sheet.animals;
+    const byId = new Map(list.map(a => [a.id, a]));
+
+    // Group children by structural parent (prefer father, fall back to mother, else root)
+    const childrenOf = new Map();
+    const roots = [];
+    list.forEach(a => {
+      const structParent = a.fatherId || a.motherId || null;
+      if (structParent && byId.has(structParent)) {
+        if (!childrenOf.has(structParent)) childrenOf.set(structParent, []);
+        childrenOf.get(structParent).push(a);
+      } else {
+        roots.push(a);
+      }
+    });
+
+    function nodeXml(a, depth) {
+      const pad = '  '.repeat(depth);
+      const fatherName = a.fatherId && byId.get(a.fatherId) ? byId.get(a.fatherId).name : '';
+      const motherName = a.motherId && byId.get(a.motherId) ? byId.get(a.motherId).name : '';
+      const noteParts = [];
+      if (a.sex && a.sex !== 'U') noteParts.push('Sex: ' + (a.sex === 'M' ? 'Male' : 'Female'));
+      if (a.breed) noteParts.push('Breed: ' + a.breed);
+      if (a.group) noteParts.push('Group: ' + a.group);
+      if (a.color) noteParts.push('Color: ' + a.color);
+      if (a.dob) noteParts.push('Born: ' + a.dob);
+      if (a.dod) noteParts.push('Died: ' + a.dod);
+      if (fatherName) noteParts.push('Father: ' + fatherName);
+      if (motherName) noteParts.push('Mother: ' + motherName);
+      if (Array.isArray(a.vaccines) && a.vaccines.length) noteParts.push('Vaccines: ' + a.vaccines.join(', '));
+      if (a.notes) noteParts.push(a.notes);
+      const note = noteParts.join(' | ');
+      const text = a.name + (a.group ? ' [' + a.group + ']' : '');
+      const kids = childrenOf.get(a.id) || [];
+      if (kids.length === 0) {
+        return pad + '<outline text="' + escapeXml(text) + '" _note="' + escapeXml(note) + '"/>\n';
+      }
+      let out = pad + '<outline text="' + escapeXml(text) + '" _note="' + escapeXml(note) + '">\n';
+      kids.forEach(k => { out += nodeXml(k, depth + 1); });
+      out += pad + '</outline>\n';
+      return out;
+    }
+
+    let body = '';
+    roots.forEach(r => { body += nodeXml(r, 2); });
+    return (
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<opml version="2.0">\n' +
+      '  <head>\n' +
+      '    <title>' + escapeXml(sheet.name) + '</title>\n' +
+      '    <dateCreated>' + new Date().toUTCString() + '</dateCreated>\n' +
+      '  </head>\n' +
+      '  <body>\n' +
+      '    <outline text="' + escapeXml(sheet.name) + '">\n' +
+      body +
+      '    </outline>\n' +
+      '  </body>\n' +
+      '</opml>\n'
+    );
+  }
+  function importOPML(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const xml = new DOMParser().parseFromString(e.target.result, 'text/xml');
+        const parseErr = xml.querySelector('parsererror');
+        if (parseErr) throw new Error('XML parse error');
+
+        const body = xml.querySelector('body');
+        if (!body) throw new Error('no <body> element');
+
+        // Top-level outline becomes the sheet name (if there's exactly one wrapper)
+        // Otherwise we use the file name (without extension) as the sheet name.
+        let rootOutlines = Array.from(body.children).filter(n => n.tagName.toLowerCase() === 'outline');
+        let sheetName = file.name.replace(/\.(opml|xml)$/i, '');
+        if (rootOutlines.length === 1 && rootOutlines[0].children.length > 0) {
+          // Single wrapper — use its text as sheet name and treat its children as the actual roots
+          const wrapperText = rootOutlines[0].getAttribute('text') || rootOutlines[0].getAttribute('title');
+          if (wrapperText) sheetName = wrapperText;
+          rootOutlines = Array.from(rootOutlines[0].children).filter(n => n.tagName.toLowerCase() === 'outline');
+        }
+
+        // Walk the tree, building animals. Each outline becomes one animal.
+        // The outline's parent (in the tree) becomes its structural parent, used as the
+        // father unless the note explicitly names a different father.
+        const newAnimals = [];
+        // pendingParents: [{ animalIdx, fatherName, motherName, structuralParentIdx }]
+        const pending = [];
+
+        function genUuid() {
+          return 'a-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+        }
+        function parseNote(noteRaw) {
+          // Note format from our exporter: "Sex: Male | Breed: Lab | Group: G1 | Color: x | Born: y | Died: z | Father: F | Mother: M | Vaccines: V1, V2 | freeform notes"
+          const parsed = { sex: 'U', breed: '', group: '', color: '', dob: '', dod: '', fatherName: '', motherName: '', vaccines: [], notes: '' };
+          if (!noteRaw) return parsed;
+          const parts = noteRaw.split(/\s*\|\s*/);
+          const leftover = [];
+          for (const p of parts) {
+            const m = p.match(/^([A-Za-z]+):\s*(.*)$/);
+            if (!m) { leftover.push(p); continue; }
+            const key = m[1].toLowerCase();
+            const val = m[2].trim();
+            if (key === 'sex') parsed.sex = val.toLowerCase().startsWith('m') ? 'M' : (val.toLowerCase().startsWith('f') ? 'F' : 'U');
+            else if (key === 'breed') parsed.breed = val;
+            else if (key === 'group') parsed.group = val;
+            else if (key === 'color') parsed.color = val;
+            else if (key === 'born') parsed.dob = val;
+            else if (key === 'died') parsed.dod = val;
+            else if (key === 'father') parsed.fatherName = val;
+            else if (key === 'mother') parsed.motherName = val;
+            else if (key === 'vaccines') parsed.vaccines = val.split(/\s*,\s*/).filter(Boolean);
+            else leftover.push(p);
+          }
+          parsed.notes = leftover.join(' | ').trim();
+          return parsed;
+        }
+
+        function walk(outline, structuralParentIdx) {
+          const text = outline.getAttribute('text') || outline.getAttribute('title') || 'Unnamed';
+          // Strip "[Group X]" suffix that our exporter adds — group is in the note anyway
+          const cleanName = text.replace(/\s*\[[^\]]+\]\s*$/, '').trim() || 'Unnamed';
+          const note = outline.getAttribute('_note') || outline.getAttribute('note') || '';
+          const fields = parseNote(note);
+          const animal = {
+            id: genUuid(),
+            name: cleanName,
+            sex: fields.sex,
+            breed: fields.breed,
+            group: fields.group,
+            groupColor: '#ff9500',
+            color: fields.color,
+            dob: fields.dob,
+            dod: fields.dod,
+            fatherId: null,
+            motherId: null,
+            notes: fields.notes,
+            vaccines: fields.vaccines,
+          };
+          const idx = newAnimals.length;
+          newAnimals.push(animal);
+          pending.push({ idx, fatherName: fields.fatherName, motherName: fields.motherName, structuralParentIdx });
+          // Recurse
+          Array.from(outline.children)
+            .filter(n => n.tagName.toLowerCase() === 'outline')
+            .forEach(child => walk(child, idx));
+        }
+        rootOutlines.forEach(o => walk(o, -1));
+
+        if (newAnimals.length === 0) throw new Error('no animals found in OPML');
+
+        // Resolve parent references — first try by name from the note, then fall back to structural parent
+        const byName = new Map();
+        newAnimals.forEach(a => { byName.set(a.name.toLowerCase(), a.id); });
+
+        pending.forEach(p => {
+          const animal = newAnimals[p.idx];
+          // Father from explicit note
+          if (p.fatherName) {
+            const fid = byName.get(p.fatherName.toLowerCase());
+            if (fid) animal.fatherId = fid;
+          }
+          if (p.motherName) {
+            const mid = byName.get(p.motherName.toLowerCase());
+            if (mid) animal.motherId = mid;
+          }
+          // Fallback: if neither parent is set but there's a structural parent in the tree,
+          // use it as the father (since that's what our exporter does)
+          if (!animal.fatherId && !animal.motherId && p.structuralParentIdx >= 0) {
+            const structParent = newAnimals[p.structuralParentIdx];
+            if (structParent.sex === 'F') {
+              animal.motherId = structParent.id;
+            } else {
+              animal.fatherId = structParent.id;
+            }
+          }
+        });
+
+        // Collect new vaccines into the catalog
+        const importedVaccines = new Set();
+        newAnimals.forEach(a => a.vaccines.forEach(v => importedVaccines.add(v)));
+
+        if (!confirm('Import ' + newAnimals.length + ' animals as a new sheet "' + sheetName + '"?')) return;
+
+        const newSheet = { id: sheetId(), name: sheetName, animals: newAnimals };
+        book.sheets.push(newSheet);
+        book.activeSheetId = newSheet.id;
+        // Merge vaccines into catalog
+        importedVaccines.forEach(v => addToVaccineCatalog(v));
+
+        animals = activeSheet().animals;
+        saveAnimals();
+        clearForm();
+        renderGraph();
+        renderSheetBar();
+        showStatus('Imported ' + newAnimals.length + ' animals into "' + sheetName + '"');
+      } catch (err) {
+        alert('Could not import OPML: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function exportMindMap() {
+    const s = activeSheet();
+    if (!s || s.animals.length === 0) {
+      showStatus('Nothing to export — add some animals first');
+      return;
+    }
+    const opml = buildOpmlForSheet(s);
+    const blob = new Blob([opml], { type: 'text/x-opml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'shelagh-' + s.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-' + new Date().toISOString().slice(0,10) + '.opml';
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('Exported "' + s.name + '" as .opml — open in MindNode, iThoughts, Freemind, XMind…');
+  }
+
   // ---------- wire up ----------
   document.getElementById('btn-save').addEventListener('click', saveForm);
   document.getElementById('btn-new').addEventListener('click', clearForm);
   document.getElementById('btn-delete').addEventListener('click', deleteCurrent);
   document.getElementById('btn-export').addEventListener('click', exportJSON);
+  document.getElementById('btn-export-mind').addEventListener('click', exportMindMap);
   document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-import').click());
+  document.getElementById('btn-import-opml').addEventListener('click', () => document.getElementById('file-import-opml').click());
+  document.getElementById('file-import-opml').addEventListener('change', (e) => {
+    if (e.target.files[0]) importOPML(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  // Sheet bar
+  document.getElementById('sheet-select').addEventListener('change', (e) => switchSheet(e.target.value));
+  document.getElementById('btn-new-sheet').addEventListener('click', newSheet);
+  document.getElementById('btn-rename-sheet').addEventListener('click', renameSheet);
+  document.getElementById('btn-delete-sheet').addEventListener('click', deleteSheet);
+
+  // Graph controls
+  document.getElementById('ctrl-up').addEventListener('click', () => pan(0, -100));
+  document.getElementById('ctrl-down').addEventListener('click', () => pan(0, 100));
+  document.getElementById('ctrl-left').addEventListener('click', () => pan(-100, 0));
+  document.getElementById('ctrl-right').addEventListener('click', () => pan(100, 0));
+  document.getElementById('ctrl-zoom-in').addEventListener('click', () => zoomBy(1.25));
+  document.getElementById('ctrl-zoom-out').addEventListener('click', () => zoomBy(0.8));
+  document.getElementById('ctrl-zoom-reset').addEventListener('click', resetZoom);
+  document.getElementById('ctrl-fit').addEventListener('click', fitView);
   document.getElementById('file-import').addEventListener('change', (e) => {
     if (e.target.files[0]) importJSON(e.target.files[0]);
     e.target.value = '';
   });
   document.getElementById('btn-clear-all').addEventListener('click', () => {
     if (animals.length === 0) return;
-    if (!confirm('Delete ALL ' + animals.length + ' animals? This cannot be undone.')) return;
-    animals = [];
+    if (!confirm('Delete ALL ' + animals.length + ' animals in sheet "' + activeSheet().name + '"? This cannot be undone.')) return;
+    animals.length = 0; // mutate in place so the sheet's reference stays valid
     saveAnimals();
     clearForm();
     renderGraph();
+    renderSheetBar();
     showStatus('Cleared all');
   });
   document.getElementById('search').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSearch(e.target.value.trim());
   });
+  // Live search as the user types (skip empty)
+  document.getElementById('search').addEventListener('input', (e) => {
+    const q = e.target.value.trim();
+    if (q.length >= 2) handleSearch(q);
+  });
+
+  // Settings dropdown toggle
+  const settingsMenu = document.getElementById('settings-menu');
+  document.getElementById('btn-settings').addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsMenu.classList.toggle('open');
+  });
+  // Close after picking any item
+  settingsMenu.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => settingsMenu.classList.remove('open'));
+  });
+  // Click outside closes the menu
+  document.addEventListener('click', (e) => {
+    if (!settingsMenu.contains(e.target) && e.target.id !== 'btn-settings') {
+      settingsMenu.classList.remove('open');
+    }
+  });
   // Keep sex changes updating dropdowns so user can't self-father an existing animal after a sex change
   F.sex.addEventListener('change', () => {
     populateParentDropdowns(editingId);
+  });
+
+  // Vaccines: add from existing dropdown
+  document.getElementById('btn-add-vaccine').addEventListener('click', () => {
+    const v = F.vaccineSelect.value;
+    if (!v) { showStatus('Pick a vaccine from the list first'); return; }
+    addVaccineToCurrent(v);
+    F.vaccineSelect.value = '';
+  });
+  // Vaccines: add a brand-new one (also adds to shared catalog)
+  document.getElementById('btn-add-new-vaccine').addEventListener('click', () => {
+    const v = F.vaccineNew.value.trim();
+    if (!v) { showStatus('Type a vaccine name first'); F.vaccineNew.focus(); return; }
+    addVaccineToCurrent(v);
+    F.vaccineNew.value = '';
+    F.vaccineNew.focus();
+  });
+  // Pressing Enter in the new-vaccine input adds it
+  F.vaccineNew.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-new-vaccine').click(); }
   });
 
   // Sibling shortcut: copy chosen animal's parents into this form
@@ -555,6 +1238,7 @@
   initGraph();
   clearForm();
   renderGraph();
+  renderSheetBar();
 })();
 </script>
 </body>
